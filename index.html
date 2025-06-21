@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en" x-data="app" :class="theme">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title x-text="pageTitle">Media Library</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body x-cloak>
+  
+  <!-- Header Component -->
+  <header class="header" x-show="!focusMode">
+    <div class="header-container">
+      <div class="header-left">
+        <div class="site-title" @click="navigate('home')">
+          <span class="brand-text">media-library</span>
+          <span class="cursor">_</span>
+        </div>
+      </div>
+      
+      <div class="header-center">
+        <span class="current-path" x-text="currentPath"></span>
+      </div>
+      
+      <div class="header-right">
+        <button @click="toggleTheme" class="theme-toggle" 
+                :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
+          <span x-show="theme === 'dark'">☀️</span>
+          <span x-show="theme === 'light'">🌙</span>
+        </button>
+        <span class="header-time" x-text="currentTime"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Component -->
+  <nav class="main-nav" x-show="!focusMode">
+    <div class="nav-container">
+      <div class="nav-links">
+        <template x-for="link in navigation" :key="link.id">
+          <a @click.prevent="navigate(link.view)" 
+             :class="{'active': isActiveRoute(link.view)}" 
+             class="nav-link"
+             x-text="link.label">
+          </a>
+        </template>
+      </div>
+      
+      <div class="nav-actions">
+        <button @click="toggleFocus" class="action-btn" x-show="currentView === 'post'">
+          <span x-text="focusMode ? 'exit focus' : 'focus mode'"></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    
+    <!-- Home View (Blog Posts) -->
+    <section x-show="currentView === 'home'" x-transition:enter.opacity.duration.200ms>
+      <div class="page-header">
+        <h1 class="page-title">Recent Posts</h1>
+        <p class="page-subtitle">Latest articles and updates</p>
+      </div>
+      
+      <div class="posts-grid">
+        <template x-for="post in posts" :key="post.id">
+          <article class="post-card" @click="openPost(post)">
+            <div class="post-header">
+              <span class="post-date" x-text="formatDate(post.date)"></span>
+              <span class="post-read-time" x-text="post.readTime + ' min'"></span>
+            </div>
+            <h2 class="post-title" x-text="post.title"></h2>
+            <p class="post-excerpt" x-text="post.excerpt"></p>
+            <div class="post-tags">
+              <template x-for="tag in post.tags" :key="tag">
+                <span class="tag" x-text="tag" @click.stop="navigateToTag(tag)"></span>
+              </template>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <!-- Books Library View -->
+    <section x-show="currentView === 'books'" x-transition:enter.opacity.duration.200ms>
+      <div class="page-header">
+        <h1 class="page-title">Digital Library</h1>
+        <p class="page-subtitle">Browse and download books</p>
+      </div>
+      
+      <!-- Search and Filters -->
+      <div class="library-controls">
+        <div class="search-section">
+          <input type="text" 
+                 x-model="bookSearch" 
+                 placeholder="Search books by title, author, ISBN..."
+                 class="search-input"
+                 @input="filterBooks">
+        </div>
+        
+        <div class="filter-section">
+          <div class="filter-group">
+            <label class="filter-label">Genre:</label>
+            <select x-model="filters.genre" @change="filterBooks" class="filter-select">
+              <option value="">All Genres</option>
+              <template x-for="genre in availableGenres" :key="genre">
+                <option :value="genre" x-text="genre"></option>
+              </template>
+            </select>
+          </div>
+          
+          <div class="filter-group">
+            <label class="filter-label">Format:</label>
+            <select x-model="filters.format" @change="filterBooks" class="filter-select">
+              <option value="">All Formats</option>
+              <option value="epub">EPUB</option>
+              <option value="pdf">PDF</option>
+            </select>
+          </div>
+          
+          <div class="filter-group">
+            <label class="filter-label">Language:</label>
+            <select x-model="filters.language" @change="filterBooks" class="filter-select">
+              <option value="">All Languages</option>
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+            </select>
+          </div>
+          
+          <!-- Grid Layout Selector -->
+          <div class="filter-group">
+            <label class="filter-label">View:</label>
+            <select x-model="gridLayout" class="filter-select grid-select">
+              <template x-for="option in gridLayoutOptions" :key="option.value">
+                <option :value="option.value">
+                  <span x-text="option.icon + ' ' + option.label"></span>
+                </option>
+              </template>
+            </select>
+          </div>
+          
+          <button @click="clearFilters" class="clear-filters-btn" x-show="hasActiveFilters">
+            Clear Filters
+          </button>
+        </div>
+      </div>
+      
+      <!-- Results Summary -->
+      <div class="results-summary">
+        <span>Found <strong x-text="filteredBooks.length"></strong> books</span>
+        <span x-show="hasActiveFilters" class="filter-status">
+          (filtered from <span x-text="books.length"></span> total)
+        </span>
+      </div>
+      
+      <!-- Books Grid with Dynamic Layout -->
+      <div class="books-grid" :class="'grid-' + gridLayout">
+        <template x-for="book in paginatedBooks" :key="book.id">
+          <article class="book-card" @click="openBook(book)">
+            <div class="book-cover">
+              <img :src="book.cover || 'assets/covers/default.jpg'" :alt="book.title + ' cover'">
+              <div class="book-formats">
+                <template x-for="format in book.formats" :key="format">
+                  <span class="format-badge" x-text="format.toUpperCase()"></span>
+                </template>
+              </div>
+            </div>
+            <div class="book-info">
+              <h3 class="book-title" x-text="book.title"></h3>
+              <p class="book-author" x-text="book.author"></p>
+              <div class="book-meta">
+                <span class="book-year" x-text="book.year"></span>
+                <span class="book-size" x-text="formatFileSize(book.size)"></span>
+              </div>
+              <div class="book-tags">
+                <span class="tag small" x-text="book.genre"></span>
+                <span class="tag small" x-text="book.language"></span>
+              </div>
+            </div>
+          </article>
+        </template>
+      </div>
+      
+      <!-- Pagination -->
+      <div class="pagination" x-show="totalBookPages > 1">
+        <button @click="currentBookPage--" 
+                :disabled="currentBookPage === 1"
+                class="page-btn">
+          ← prev
+        </button>
+        <span class="page-info">
+          page <span x-text="currentBookPage"></span> of <span x-text="totalBookPages"></span>
+        </span>
+        <button @click="currentBookPage++" 
+                :disabled="currentBookPage === totalBookPages"
+                class="page-btn">
+          next →
+        </button>
+      </div>
+    </section>
+
+    <!-- Book Detail View -->
+    <section x-show="currentView === 'book-detail'" x-transition:enter.opacity.duration.200ms>
+      <div class="book-detail" x-show="currentBook">
+        <div class="book-actions">
+          <button @click="navigate('books')" class="action-btn">
+            ← back to library
+          </button>
+        </div>
+
+        <div class="book-detail-content">
+          <div class="book-detail-main">
+            <div class="book-detail-cover">
+              <img :src="currentBook?.cover || 'assets/covers/default.jpg'" :alt="currentBook?.title + ' cover'">
+            </div>
+            
+            <div class="book-detail-info">
+              <h1 class="book-detail-title" x-text="currentBook?.title"></h1>
+              <p class="book-detail-author">by <span x-text="currentBook?.author"></span></p>
+              
+              <div class="book-info-table">
+                <div class="info-row">
+                  <span class="info-label">ISBN:</span>
+                  <span class="info-value" x-text="currentBook?.isbn || 'N/A'"></span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Publisher:</span>
+                  <span class="info-value" x-text="currentBook?.publisher || 'Unknown'"></span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Year:</span>
+                  <span class="info-value" x-text="currentBook?.year"></span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Pages:</span>
+                  <span class="info-value" x-text="currentBook?.pages || 'N/A'"></span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Language:</span>
+                  <span class="info-value" x-text="getLanguageName(currentBook?.language)"></span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Genre:</span>
+                  <span class="info-value" x-text="currentBook?.genre"></span>
+                </div>
+              </div>
+              
+              <!-- Download Section -->
+              <div class="download-section">
+                <h3 class="download-title">Download Options</h3>
+                <div class="download-buttons">
+                  <template x-for="format in currentBook?.formats || []" :key="format">
+                    <button @click="downloadBook(currentBook.id, format)" 
+                            class="download-btn"
+                            :class="'format-' + format">
+                      <span class="format-icon" x-text="format === 'epub' ? '📖' : '📄'"></span>
+                      <span x-text="format.toUpperCase()"></span>
+                      <span class="file-size" x-text="'(' + formatFileSize(currentBook.size) + ')'"></span>
+                    </button>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="book-description" x-show="currentBook?.description">
+            <h3>Description</h3>
+            <p x-text="currentBook?.description"></p>
+          </div>
+          
+          <!-- Similar Books -->
+          <div class="similar-section" x-show="similarBooks.length > 0">
+            <h3 class="similar-title">Similar Books</h3>
+            <div class="books-carousel">
+              <template x-for="similarBook in similarBooks" :key="similarBook.id">
+                <div class="carousel-book" @click="openBook(similarBook)">
+                  <img :src="similarBook.cover || 'assets/covers/default.jpg'" :alt="similarBook.title">
+                  <p class="carousel-book-title" x-text="similarBook.title"></p>
+                  <p class="carousel-book-author" x-text="similarBook.author"></p>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Post View -->
+    <section x-show="currentView === 'post'" x-transition:enter.opacity.duration.200ms>
+      <article class="post-content" x-show="currentPost">
+        <div class="post-actions">
+          <button @click="navigate('home')" class="action-btn">
+            ← back
+          </button>
+          <button @click="toggleFocus()" class="action-btn">
+            <span x-text="focusMode ? 'exit focus' : 'focus mode'"></span>
+          </button>
+        </div>
+
+        <header class="post-header-detail">
+          <h1 class="post-title-detail" x-text="currentPost?.title"></h1>
+          <div class="post-meta-detail">
+            <span class="meta-item">
+              <span x-text="formatDate(currentPost?.date)"></span>
+            </span>
+            <span class="meta-separator">·</span>
+            <span class="meta-item">
+              <span x-text="currentPost?.readTime + ' min read'"></span>
+            </span>
+          </div>
+          <div class="post-tags-detail">
+            <template x-for="tag in currentPost?.tags || []" :key="tag">
+              <span class="tag" @click="navigateToTag(tag)" x-text="tag"></span>
+            </template>
+          </div>
+        </header>
+
+        <div class="post-body" x-html="currentPost?.content"></div>
+      </article>
+    </section>
+
+    <!-- Archive View -->
+    <section x-show="currentView === 'archive'" x-transition:enter.opacity.duration.200ms>
+      <div class="page-header">
+        <h1 class="page-title">Archive</h1>
+        <p class="page-subtitle">Browse posts by year</p>
+      </div>
+      
+      <div class="archive-tree">
+        <template x-for="year in archiveByYear" :key="year.year">
+          <div class="year-group">
+            <h3 class="year-title" @click="year.expanded = !year.expanded">
+              <span class="year-toggle" x-text="year.expanded ? '−' : '+'"></span>
+              <span x-text="year.year"></span>
+              <span class="year-count">(<span x-text="year.posts.length"></span>)</span>
+            </h3>
+            <div class="year-posts" x-show="year.expanded" x-transition>
+              <template x-for="post in year.posts" :key="post.id">
+                <div class="archive-post" @click="openPost(post)">
+                  <span class="archive-date" x-text="formatDate(post.date, 'short')"></span>
+                  <span class="archive-title" x-text="post.title"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </section>
+
+    <!-- Tags View -->
+    <section x-show="currentView === 'tags'" x-transition:enter.opacity.duration.200ms>
+      <div class="page-header">
+        <h1 class="page-title">Tags</h1>
+        <p class="page-subtitle">Browse posts by topic</p>
+      </div>
+      
+      <div class="tags-cloud">
+        <template x-for="tag in sortedTags" :key="tag.name">
+          <button class="tag-cloud-item" 
+                  @click="filterByTag(tag.name)"
+                  :class="{'active': selectedTag === tag.name}">
+            <span x-text="tag.name"></span>
+            <span class="tag-count" x-text="tag.count"></span>
+          </button>
+        </template>
+      </div>
+      
+      <div class="filtered-posts" x-show="selectedTag">
+        <div class="filter-header">
+          <h3>Posts tagged with "<span x-text="selectedTag"></span>"</h3>
+          <button @click="selectedTag = null" class="clear-filter">clear filter</button>
+        </div>
+        <div class="posts-list">
+          <template x-for="post in filteredByTag" :key="post.id">
+            <div class="filtered-post" @click="openPost(post)">
+              <span x-text="post.title"></span>
+              <span class="post-date-small" x-text="formatDate(post.date, 'short')"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- About View -->
+    <section x-show="currentView === 'about'" x-transition:enter.opacity.duration.200ms>
+      <div class="about-content">
+        <div class="page-header">
+          <h1 class="page-title">About</h1>
+          <p class="page-subtitle">Modern media library built with Alpine.js</p>
+        </div>
+        
+        <div class="about-section">
+          <h3>Features</h3>
+          <ul class="feature-list">
+            <li>Blog with posts and tags</li>
+            <li>Digital library with advanced filtering</li>
+            <li>Multiple grid layout options</li>
+            <li>EPUB and PDF downloads</li>
+            <li>Dark/Light theme toggle</li>
+            <li>Responsive design</li>
+            <li>Built with Alpine.js</li>
+          </ul>
+        </div>
+
+        <div class="about-section stats">
+          <h3>Statistics</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-value" x-text="posts.length"></span>
+              <span class="stat-label">Posts</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" x-text="books.length"></span>
+              <span class="stat-label">Books</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" x-text="Object.keys(tagCounts).length"></span>
+              <span class="stat-label">Tags</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" x-text="availableGenres.length"></span>
+              <span class="stat-label">Genres</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer Component -->
+  <footer class="footer" x-show="!focusMode">
+    <div class="footer-content">
+      <span class="footer-item">
+        <span x-text="posts.length"></span> posts
+      </span>
+      <span class="footer-separator">·</span>
+      <span class="footer-item">
+        <span x-text="books.length"></span> books
+      </span>
+      <span class="footer-separator">·</span>
+      <span class="footer-item">
+        <span x-text="theme"></span> theme
+      </span>
+    </div>
+  </footer>
+
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

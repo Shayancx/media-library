@@ -1,0 +1,23 @@
+<header class="header" x-show="!focusMode">
+  <div class="header-container">
+    <div class="header-left">
+      <div class="site-title" @click="navigate('home')">
+        <span class="brand-text">media-library</span>
+        <span class="cursor">_</span>
+      </div>
+    </div>
+    
+    <div class="header-center">
+      <span class="current-path" x-text="currentPath"></span>
+    </div>
+    
+    <div class="header-right">
+      <button @click="toggleTheme" class="theme-toggle" 
+              :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
+        <span x-show="theme === 'dark'">☀️</span>
+        <span x-show="theme === 'light'">🌙</span>
+      </button>
+      <span class="header-time" x-text="currentTime"></span>
+    </div>
+  </div>
+</header>

@@ -1,0 +1,19 @@
+<nav class="main-nav" x-show="!focusMode">
+  <div class="nav-container">
+    <div class="nav-links">
+      <template x-for="link in navigation" :key="link.id">
+        <a @click.prevent="navigate(link.view)" 
+           :class="{'active': isActiveRoute(link.view)}" 
+           class="nav-link"
+           x-text="link.label">
+        </a>
+      </template>
+    </div>
+    
+    <div class="nav-actions">
+      <button @click="toggleFocus" class="action-btn" x-show="currentView === 'post'">
+        <span x-text="focusMode ? 'exit focus' : 'focus mode'"></span>
+      </button>
+    </div>
+  </div>
+</nav>
