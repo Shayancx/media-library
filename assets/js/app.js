@@ -233,6 +233,246 @@ document.addEventListener('alpine:init', () => {
     }
   });
 
+  // Music Store
+  Alpine.store('music', {
+    tracks: [
+      {
+        id: 1,
+        title: '4:00 A.M.',
+        artist: 'Unknown Artist',
+        album: 'Unknown Album',
+        duration: 240,
+        file: 'assets/music/4_00A.M.mp3'
+      },
+      {
+        id: 2,
+        title: 'Mas Que Nada',
+        artist: 'Unknown Artist',
+        album: 'Unknown Album',
+        duration: 180,
+        file: 'assets/music/Mas_Que_Nada.mp3'
+      },
+      {
+        id: 3,
+        title: 'Red Sex',
+        artist: 'Unknown Artist',
+        album: 'Unknown Album',
+        duration: 200,
+        file: 'assets/music/Red_Sex.mp3'
+      },
+      {
+        id: 4,
+        title: 'Ulysses and the Sea',
+        artist: 'Unknown Artist',
+        album: 'Unknown Album',
+        duration: 300,
+        file: 'assets/music/Ulysses_and_the_Sea.mp3'
+      },
+      {
+        id: 5,
+        title: 'Wildflower',
+        artist: 'Unknown Artist',
+        album: 'Unknown Album',
+        duration: 220,
+        file: 'assets/music/Wildflower.mp3'
+      },
+      {
+        id: 6,
+        title: 'É Preciso Dar Um Jeito Meu Amigo',
+        artist: 'Unknown Artist',
+        album: 'Unknown Album',
+        duration: 260,
+        file: 'assets/music/E_Preciso_Dar_Um_Jeito_Meu_Amigo.mp3'
+      }
+    ],
+    
+    // Player state
+    currentTrack: null,
+    isPlaying: false,
+    currentTime: 0,
+    duration: 0,
+    volume: 0.7,
+    isMuted: false,
+    showPlayer: false,
+    repeatMode: 'none', // none, one, all
+    isShuffled: false,
+    playlist: [],
+    currentIndex: 0,
+    
+    // Audio element reference
+    audio: null,
+    
+    init() {
+      // Create audio element
+      this.audio = new Audio();
+      this.audio.volume = this.volume;
+      
+      // Set up event listeners using Alpine effect
+      Alpine.effect(() => {
+        if (this.audio) {
+          this.audio.ontimeupdate = () => {
+            this.currentTime = this.audio.currentTime;
+          };
+          
+          this.audio.onloadedmetadata = () => {
+            this.duration = this.audio.duration;
+          };
+          
+          this.audio.onended = () => {
+            this.handleTrackEnd();
+          };
+          
+          this.audio.onerror = (e) => {
+            console.error('Audio error:', e);
+            this.isPlaying = false;
+          };
+        }
+      });
+      
+      // Initialize playlist
+      this.playlist = [...this.tracks];
+    },
+    
+    play(track = null) {
+      if (track) {
+        this.currentTrack = track;
+        this.currentIndex = this.playlist.findIndex(t => t.id === track.id);
+        this.audio.src = track.file;
+        this.showPlayer = true;
+      }
+      
+      if (this.currentTrack && this.audio.src) {
+        this.audio.play()
+          .then(() => {
+            this.isPlaying = true;
+          })
+          .catch(e => {
+            console.error('Play error:', e);
+          });
+      }
+    },
+    
+    pause() {
+      this.audio.pause();
+      this.isPlaying = false;
+    },
+    
+    togglePlay() {
+      if (this.isPlaying) {
+        this.pause();
+      } else {
+        this.play();
+      }
+    },
+    
+    next() {
+      if (this.playlist.length === 0) return;
+      
+      let nextIndex = this.currentIndex + 1;
+      if (nextIndex >= this.playlist.length) {
+        nextIndex = 0;
+      }
+      
+      this.play(this.playlist[nextIndex]);
+    },
+    
+    previous() {
+      if (this.playlist.length === 0) return;
+      
+      // If more than 3 seconds into the song, restart it
+      if (this.currentTime > 3) {
+        this.seek(0);
+        return;
+      }
+      
+      let prevIndex = this.currentIndex - 1;
+      if (prevIndex < 0) {
+        prevIndex = this.playlist.length - 1;
+      }
+      
+      this.play(this.playlist[prevIndex]);
+    },
+    
+    seek(time) {
+      this.audio.currentTime = time;
+      this.currentTime = time;
+    },
+    
+    setVolume(volume) {
+      this.volume = volume;
+      this.audio.volume = volume;
+      if (volume > 0 && this.isMuted) {
+        this.isMuted = false;
+      }
+    },
+    
+    toggleMute() {
+      this.isMuted = !this.isMuted;
+      this.audio.muted = this.isMuted;
+    },
+    
+    toggleRepeat() {
+      const modes = ['none', 'one', 'all'];
+      const currentIndex = modes.indexOf(this.repeatMode);
+      this.repeatMode = modes[(currentIndex + 1) % modes.length];
+    },
+    
+    toggleShuffle() {
+      this.isShuffled = !this.isShuffled;
+      if (this.isShuffled) {
+        this.shufflePlaylist();
+      } else {
+        this.playlist = [...this.tracks];
+        if (this.currentTrack) {
+          this.currentIndex = this.playlist.findIndex(t => t.id === this.currentTrack.id);
+        }
+      }
+    },
+    
+    shufflePlaylist() {
+      const current = this.currentTrack;
+      const remaining = this.playlist.filter(t => t.id !== current?.id);
+      
+      // Fisher-Yates shuffle
+      for (let i = remaining.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+      }
+      
+      if (current) {
+        this.playlist = [current, ...remaining];
+        this.currentIndex = 0;
+      } else {
+        this.playlist = remaining;
+      }
+    },
+    
+    handleTrackEnd() {
+      if (this.repeatMode === 'one') {
+        this.seek(0);
+        this.play();
+      } else if (this.repeatMode === 'all' || this.currentIndex < this.playlist.length - 1) {
+        this.next();
+      } else {
+        this.isPlaying = false;
+      }
+    },
+    
+    closePlayer() {
+      this.pause();
+      this.showPlayer = false;
+      this.currentTrack = null;
+      this.audio.src = '';
+    },
+    
+    formatTime(seconds) {
+      if (!seconds || isNaN(seconds)) return '0:00';
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+  });
+
   // Navigation Store
   Alpine.store('navigation', {
     current: 'home',
@@ -243,6 +483,7 @@ document.addEventListener('alpine:init', () => {
     routes: [
       { id: 'home', label: 'home', view: 'home' },
       { id: 'books', label: 'books', view: 'books' },
+      { id: 'music', label: 'music', view: 'music' },
       { id: 'archive', label: 'archive', view: 'archive' },
       { id: 'tags', label: 'tags', view: 'tags' },
       { id: 'about', label: 'about', view: 'about' }
@@ -311,6 +552,9 @@ document.addEventListener('alpine:init', () => {
       // Initialize theme
       this.$store.theme.init();
       
+      // Initialize music player
+      this.$store.music.init();
+      
       // Save grid layout preference
       this.$watch('gridLayout', value => {
         localStorage.setItem('gridLayout', value);
@@ -333,6 +577,7 @@ document.addEventListener('alpine:init', () => {
       const titles = {
         home: 'Media Library',
         books: 'Books - Media Library',
+        music: 'Music - Media Library',
         'book-detail': 'Book Details - Media Library',
         post: 'Post - Media Library',
         archive: 'Archive - Media Library',

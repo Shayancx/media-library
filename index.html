@@ -212,6 +212,38 @@
       </div>
     </section>
 
+    <!-- Music Library View -->
+    <section x-show="$store.navigation.current === 'music'" x-transition:enter.opacity.duration.200ms>
+      <div class="page-header">
+        <h1 class="page-title">Music Library</h1>
+        <p class="page-subtitle">Stream your music collection</p>
+      </div>
+      
+      <div class="music-grid">
+        <template x-for="(track, index) in $store.music.tracks" :key="track.id">
+          <div class="track-item" 
+               :class="{'playing': $store.music.currentTrack?.id === track.id && $store.music.isPlaying}"
+               @click="$store.music.play(track)">
+            <div class="track-number">
+              <span x-show="$store.music.currentTrack?.id !== track.id || !$store.music.isPlaying" 
+                    x-text="index + 1"></span>
+              <div x-show="$store.music.currentTrack?.id === track.id && $store.music.isPlaying" 
+                   class="track-play-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM9.5 16.5v-9l7 4.5-7 4.5z"/>
+                </svg>
+              </div>
+            </div>
+            <div class="track-info">
+              <div class="track-title" x-text="track.title"></div>
+              <div class="track-artist" x-text="track.artist"></div>
+            </div>
+            <div class="track-duration" x-text="$store.music.formatTime(track.duration)"></div>
+          </div>
+        </template>
+      </div>
+    </section>
+
     <!-- Book Detail View -->
     <section x-show="$store.navigation.current === 'book-detail'" x-transition:enter.opacity.duration.200ms>
       <div class="book-detail" x-show="$store.navigation.currentBook">
@@ -407,6 +439,7 @@
           <ul class="feature-list">
             <li>Blog with posts and tags</li>
             <li>Digital library with advanced filtering</li>
+            <li>Music player with playlist support</li>
             <li>Multiple grid layout options</li>
             <li>EPUB and PDF downloads</li>
             <li>Dark/Light theme toggle</li>
@@ -427,17 +460,146 @@
               <span class="stat-label">Books</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value" x-text="Object.keys($store.posts.allTags).length"></span>
-              <span class="stat-label">Tags</span>
+              <span class="stat-value" x-text="$store.music.tracks.length"></span>
+              <span class="stat-label">Songs</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value" x-text="$store.books.genres.length"></span>
-              <span class="stat-label">Genres</span>
+              <span class="stat-value" x-text="Object.keys($store.posts.allTags).length"></span>
+              <span class="stat-label">Tags</span>
             </div>
           </div>
         </div>
       </div>
     </section>
+
+    <!-- Music Player Bar -->
+    <div class="music-player" 
+         :class="{'hidden': !$store.music.showPlayer}"
+         x-show="$store.music.showPlayer"
+         x-transition:enter.duration.300ms
+         x-transition:leave.duration.300ms>
+      <div class="player-container">
+        <!-- Track Info -->
+        <div class="player-track-info">
+          <div class="player-track-details" x-show="$store.music.currentTrack">
+            <div class="player-track-title" x-text="$store.music.currentTrack?.title || ''"></div>
+            <div class="player-track-artist" x-text="$store.music.currentTrack?.artist || ''"></div>
+          </div>
+          <div class="player-visualizer" x-show="$store.music.isPlaying">
+            <div class="visualizer-bar playing" style="animation-delay: 0ms"></div>
+            <div class="visualizer-bar playing" style="animation-delay: 200ms"></div>
+            <div class="visualizer-bar playing" style="animation-delay: 400ms"></div>
+            <div class="visualizer-bar playing" style="animation-delay: 100ms"></div>
+            <div class="visualizer-bar playing" style="animation-delay: 300ms"></div>
+          </div>
+        </div>
+        
+        <!-- Controls -->
+        <div class="player-controls-section">
+          <div class="player-controls">
+            <button class="player-btn" 
+                    @click="$store.music.toggleShuffle()"
+                    :class="{'active': $store.music.isShuffled}"
+                    title="Shuffle">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 3 21 3 21 8"></polyline>
+                <line x1="4" y1="20" x2="21" y2="3"></line>
+                <polyline points="21 16 21 21 16 21"></polyline>
+                <line x1="15" y1="15" x2="21" y2="21"></line>
+                <line x1="4" y1="4" x2="9" y2="9"></line>
+              </svg>
+            </button>
+            
+            <button class="player-btn" @click="$store.music.previous()" title="Previous">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+              </svg>
+            </button>
+            
+            <button class="player-btn main" @click="$store.music.togglePlay()" 
+                    :title="$store.music.isPlaying ? 'Pause' : 'Play'">
+              <svg x-show="!$store.music.isPlaying" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              <svg x-show="$store.music.isPlaying" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 4h4v16H6zm8 0h4v16h-4z"/>
+              </svg>
+            </button>
+            
+            <button class="player-btn" @click="$store.music.next()" title="Next">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+              </svg>
+            </button>
+            
+            <button class="player-btn" 
+                    @click="$store.music.toggleRepeat()"
+                    :class="{'active': $store.music.repeatMode !== 'none'}"
+                    :title="'Repeat: ' + $store.music.repeatMode">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="17 1 21 5 17 9"></polyline>
+                <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                <polyline points="7 23 3 19 7 15"></polyline>
+                <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                <text x="12" y="14" text-anchor="middle" fill="currentColor" font-size="10" font-weight="bold" 
+                      x-show="$store.music.repeatMode === 'one'">1</text>
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Progress Bar -->
+          <div class="player-progress">
+            <span class="player-time" x-text="$store.music.formatTime($store.music.currentTime)"></span>
+            <div class="progress-bar" 
+                 @click="e => {
+                   const rect = e.currentTarget.getBoundingClientRect();
+                   const percent = (e.clientX - rect.left) / rect.width;
+                   $store.music.seek(percent * $store.music.duration);
+                 }">
+              <div class="progress-bar-fill" 
+                   :style="`width: ${($store.music.currentTime / $store.music.duration) * 100 || 0}%`"></div>
+            </div>
+            <span class="player-time" x-text="$store.music.formatTime($store.music.duration)"></span>
+          </div>
+        </div>
+        
+        <!-- Volume and Actions -->
+        <div class="player-actions">
+          <div class="volume-control">
+            <button class="player-btn" @click="$store.music.toggleMute()" title="Mute">
+              <svg x-show="!$store.music.isMuted && $store.music.volume > 0.5" 
+                   xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+              </svg>
+              <svg x-show="!$store.music.isMuted && $store.music.volume <= 0.5 && $store.music.volume > 0" 
+                   xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/>
+              </svg>
+              <svg x-show="$store.music.isMuted || $store.music.volume === 0" 
+                   xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+              </svg>
+            </button>
+            <div class="volume-slider"
+                 @click="e => {
+                   const rect = e.currentTarget.getBoundingClientRect();
+                   const percent = (e.clientX - rect.left) / rect.width;
+                   $store.music.setVolume(Math.max(0, Math.min(1, percent)));
+                 }">
+              <div class="volume-slider-fill" 
+                   :style="`width: ${$store.music.volume * 100}%`"></div>
+            </div>
+          </div>
+          
+          <button class="player-close" @click="$store.music.closePlayer()" title="Close player">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
 
   </main>
 
@@ -450,6 +612,10 @@
       <span class="footer-separator">·</span>
       <span class="footer-item">
         <span x-text="$store.books.items.length"></span> books
+      </span>
+      <span class="footer-separator">·</span>
+      <span class="footer-item">
+        <span x-text="$store.music.tracks.length"></span> songs
       </span>
       <span class="footer-separator">·</span>
       <span class="footer-item">
