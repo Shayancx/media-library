@@ -1,94 +1,9 @@
-// Alpine.js Media Library Application
+// Alpine.js Media Library Application - Pure Alpine Implementation
 document.addEventListener('alpine:init', () => {
   
-  // Main App Component
-  Alpine.data('app', () => ({
-    // Core state
-    currentView: 'home',
-    currentPost: null,
-    currentBook: null,
-    currentPath: 'home',
-    currentTime: '',
-    focusMode: false,
-    selectedTag: null,
-    theme: localStorage.getItem('theme') || 'dark',
-    
-    // Books state
-    bookSearch: '',
-    filters: {
-      genre: '',
-      format: '',
-      language: '',
-      year: ''
-    },
-    currentBookPage: 1,
-    booksPerPage: 12,
-    
-    // Grid layout options
-    gridLayout: localStorage.getItem('gridLayout') || 'medium',
-    
-    // Sample posts data
-    posts: [
-      {
-        id: 1,
-        title: 'Getting Started with Alpine.js',
-        slug: 'getting-started-alpine',
-        date: new Date('2024-06-13'),
-        excerpt: 'Alpine.js is a rugged, minimal framework for composing JavaScript behavior in your markup.',
-        content: `
-          <p>Alpine.js offers you the reactive and declarative nature of big frameworks like Vue or React at a much lower cost.</p>
-          <p>You get to keep your DOM, and sprinkle in behavior as you see fit. Think of it like Tailwind for JavaScript.</p>
-          <h2>Installation</h2>
-          <p>You can install Alpine.js from a CDN or as an npm package.</p>
-          <pre><code>&lt;script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"&gt;&lt;/script&gt;</code></pre>
-          <h2>Basic Usage</h2>
-          <p>Alpine.js uses directives that start with x- to add behavior to your HTML.</p>
-        `,
-        tags: ['javascript', 'alpine', 'tutorial'],
-        readTime: 5
-      },
-      {
-        id: 2,
-        title: 'Building a Digital Library',
-        slug: 'digital-library',
-        date: new Date('2024-06-12'),
-        excerpt: 'How to create a searchable digital library with filtering capabilities.',
-        content: `
-          <p>Digital libraries are becoming increasingly important for preserving and sharing knowledge.</p>
-          <p>In this post, we'll explore how to build a modern digital library interface using Alpine.js.</p>
-          <h2>Features</h2>
-          <p>Our digital library includes:</p>
-          <ul>
-            <li>Advanced search functionality</li>
-            <li>Multiple filter options</li>
-            <li>Responsive grid layout</li>
-            <li>Download capabilities</li>
-          </ul>
-        `,
-        tags: ['library', 'web', 'design'],
-        readTime: 8
-      },
-      {
-        id: 3,
-        title: 'Modern Web Development Practices',
-        slug: 'modern-web-development',
-        date: new Date('2024-06-10'),
-        excerpt: 'Exploring current best practices in web development and design.',
-        content: `
-          <p>Web development has evolved significantly over the past few years.</p>
-          <p>Here are some modern practices that every developer should know.</p>
-          <h2>Performance First</h2>
-          <p>Performance should be a primary concern from the start of any project.</p>
-          <h2>Accessibility</h2>
-          <p>Building accessible websites is not optional - it's a responsibility.</p>
-        `,
-        tags: ['web', 'development', 'best-practices'],
-        readTime: 6
-      }
-    ],
-    
-    // Sample books data
-    books: [
+  // Books Store
+  Alpine.store('books', {
+    items: [
       {
         id: 1,
         title: 'The Pragmatic Programmer',
@@ -241,23 +156,179 @@ document.addEventListener('alpine:init', () => {
       }
     ],
     
-    // Initialization
-    init() {
-      this.updateTime();
-      setInterval(() => this.updateTime(), 1000);
-      document.documentElement.className = this.theme;
-      
-      this.$watch('theme', value => {
-        localStorage.setItem('theme', value);
-        document.documentElement.className = value;
+    get genres() {
+      return [...new Set(this.items.map(book => book.genre))].sort();
+    }
+  });
+
+  // Posts Store
+  Alpine.store('posts', {
+    items: [
+      {
+        id: 1,
+        title: 'Getting Started with Alpine.js',
+        slug: 'getting-started-alpine',
+        date: new Date('2024-06-13'),
+        excerpt: 'Alpine.js is a rugged, minimal framework for composing JavaScript behavior in your markup.',
+        content: `
+          <p>Alpine.js offers you the reactive and declarative nature of big frameworks like Vue or React at a much lower cost.</p>
+          <p>You get to keep your DOM, and sprinkle in behavior as you see fit. Think of it like Tailwind for JavaScript.</p>
+          <h2>Installation</h2>
+          <p>You can install Alpine.js from a CDN or as an npm package.</p>
+          <pre><code>&lt;script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"&gt;&lt;/script&gt;</code></pre>
+          <h2>Basic Usage</h2>
+          <p>Alpine.js uses directives that start with x- to add behavior to your HTML.</p>
+        `,
+        tags: ['javascript', 'alpine', 'tutorial'],
+        readTime: 5
+      },
+      {
+        id: 2,
+        title: 'Building a Digital Library',
+        slug: 'digital-library',
+        date: new Date('2024-06-12'),
+        excerpt: 'How to create a searchable digital library with filtering capabilities.',
+        content: `
+          <p>Digital libraries are becoming increasingly important for preserving and sharing knowledge.</p>
+          <p>In this post, we'll explore how to build a modern digital library interface using Alpine.js.</p>
+          <h2>Features</h2>
+          <p>Our digital library includes:</p>
+          <ul>
+            <li>Advanced search functionality</li>
+            <li>Multiple filter options</li>
+            <li>Responsive grid layout</li>
+            <li>Download capabilities</li>
+          </ul>
+        `,
+        tags: ['library', 'web', 'design'],
+        readTime: 8
+      },
+      {
+        id: 3,
+        title: 'Modern Web Development Practices',
+        slug: 'modern-web-development',
+        date: new Date('2024-06-10'),
+        excerpt: 'Exploring current best practices in web development and design.',
+        content: `
+          <p>Web development has evolved significantly over the past few years.</p>
+          <p>Here are some modern practices that every developer should know.</p>
+          <h2>Performance First</h2>
+          <p>Performance should be a primary concern from the start of any project.</p>
+          <h2>Accessibility</h2>
+          <p>Building accessible websites is not optional - it's a responsibility.</p>
+        `,
+        tags: ['web', 'development', 'best-practices'],
+        readTime: 6
+      }
+    ],
+    
+    get allTags() {
+      const tags = {};
+      this.items.forEach(post => {
+        post.tags.forEach(tag => {
+          tags[tag] = (tags[tag] || 0) + 1;
+        });
       });
+      return tags;
+    }
+  });
+
+  // Navigation Store
+  Alpine.store('navigation', {
+    current: 'home',
+    currentPost: null,
+    currentBook: null,
+    focusMode: false,
+    
+    routes: [
+      { id: 'home', label: 'home', view: 'home' },
+      { id: 'books', label: 'books', view: 'books' },
+      { id: 'archive', label: 'archive', view: 'archive' },
+      { id: 'tags', label: 'tags', view: 'tags' },
+      { id: 'about', label: 'about', view: 'about' }
+    ],
+    
+    navigate(view) {
+      this.current = view;
+      if (view !== 'post') this.currentPost = null;
+      if (view !== 'book-detail') this.currentBook = null;
+    },
+    
+    openPost(post) {
+      this.currentPost = post;
+      this.current = 'post';
+    },
+    
+    openBook(book) {
+      this.currentBook = book;
+      this.current = 'book-detail';
+      window.scrollTo(0, 0);
+    }
+  });
+
+  // Theme Store
+  Alpine.store('theme', {
+    current: localStorage.getItem('theme') || 'dark',
+    
+    init() {
+      this.apply();
+      Alpine.effect(() => {
+        localStorage.setItem('theme', this.current);
+        this.apply();
+      });
+    },
+    
+    apply() {
+      document.documentElement.setAttribute('data-theme', this.current);
+    },
+    
+    toggle() {
+      this.current = this.current === 'dark' ? 'light' : 'dark';
+    }
+  });
+
+  // Main App Component
+  Alpine.data('app', () => ({
+    // Book filters
+    bookSearch: '',
+    filters: {
+      genre: '',
+      format: '',
+      language: '',
+      year: ''
+    },
+    currentBookPage: 1,
+    booksPerPage: 12,
+    gridLayout: localStorage.getItem('gridLayout') || 'medium',
+    
+    // Tag filter
+    selectedTag: null,
+    
+    // Archive state
+    archiveExpanded: {},
+    
+    init() {
+      // Initialize theme
+      this.$store.theme.init();
       
+      // Save grid layout preference
       this.$watch('gridLayout', value => {
         localStorage.setItem('gridLayout', value);
       });
     },
     
-    // Computed properties
+    // Computed helpers using Alpine getters
+    get currentPath() {
+      const nav = this.$store.navigation;
+      if (nav.current === 'post' && nav.currentPost) {
+        return `posts/${nav.currentPost.slug}`;
+      }
+      if (nav.current === 'book-detail' && nav.currentBook) {
+        return `books/${nav.currentBook.id}`;
+      }
+      return nav.current;
+    },
+    
     get pageTitle() {
       const titles = {
         home: 'Media Library',
@@ -268,66 +339,7 @@ document.addEventListener('alpine:init', () => {
         tags: 'Tags - Media Library',
         about: 'About - Media Library'
       };
-      return titles[this.currentView] || 'Media Library';
-    },
-    
-    get navigation() {
-      return [
-        { id: 'home', label: 'home', view: 'home' },
-        { id: 'books', label: 'books', view: 'books' },
-        { id: 'archive', label: 'archive', view: 'archive' },
-        { id: 'tags', label: 'tags', view: 'tags' },
-        { id: 'about', label: 'about', view: 'about' }
-      ];
-    },
-    
-    get gridLayoutOptions() {
-      return [
-        { value: 'list', label: 'List View', icon: '≡' },
-        { value: 'large', label: 'Large Grid', icon: '⬛' },
-        { value: 'medium', label: 'Medium Grid', icon: '⬜' },
-        { value: 'compact', label: 'Compact Grid', icon: '▫' },
-        { value: 'cover', label: 'Cover Focus', icon: '🖼' }
-      ];
-    },
-    
-    get archiveByYear() {
-      const grouped = {};
-      this.posts.forEach(post => {
-        const year = post.date.getFullYear();
-        if (!grouped[year]) {
-          grouped[year] = { year, posts: [], expanded: true };
-        }
-        grouped[year].posts.push(post);
-      });
-      return Object.values(grouped).sort((a, b) => b.year - a.year);
-    },
-    
-    get tagCounts() {
-      const counts = {};
-      this.posts.forEach(post => {
-        post.tags.forEach(tag => {
-          counts[tag] = (counts[tag] || 0) + 1;
-        });
-      });
-      return counts;
-    },
-    
-    get sortedTags() {
-      return Object.entries(this.tagCounts)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count);
-    },
-    
-    get filteredByTag() {
-      if (!this.selectedTag) return [];
-      return this.posts.filter(post => 
-        post.tags.includes(this.selectedTag)
-      );
-    },
-    
-    get availableGenres() {
-      return [...new Set(this.books.map(book => book.genre))].sort();
+      return titles[this.$store.navigation.current] || 'Media Library';
     },
     
     get hasActiveFilters() {
@@ -339,8 +351,7 @@ document.addEventListener('alpine:init', () => {
     },
     
     get filteredBooks() {
-      return this.books.filter(book => {
-        // Search filter
+      return this.$store.books.items.filter(book => {
         if (this.bookSearch) {
           const search = this.bookSearch.toLowerCase();
           if (!book.title.toLowerCase().includes(search) &&
@@ -350,25 +361,10 @@ document.addEventListener('alpine:init', () => {
           }
         }
         
-        // Genre filter
-        if (this.filters.genre && book.genre !== this.filters.genre) {
-          return false;
-        }
-        
-        // Format filter
-        if (this.filters.format && !book.formats.includes(this.filters.format)) {
-          return false;
-        }
-        
-        // Language filter
-        if (this.filters.language && book.language !== this.filters.language) {
-          return false;
-        }
-        
-        // Year filter
-        if (this.filters.year && book.year !== parseInt(this.filters.year)) {
-          return false;
-        }
+        if (this.filters.genre && book.genre !== this.filters.genre) return false;
+        if (this.filters.format && !book.formats.includes(this.filters.format)) return false;
+        if (this.filters.language && book.language !== this.filters.language) return false;
+        if (this.filters.year && book.year !== parseInt(this.filters.year)) return false;
         
         return true;
       });
@@ -384,77 +380,50 @@ document.addEventListener('alpine:init', () => {
       return Math.ceil(this.filteredBooks.length / this.booksPerPage);
     },
     
+    get archiveByYear() {
+      const grouped = {};
+      this.$store.posts.items.forEach(post => {
+        const year = post.date.getFullYear();
+        if (!grouped[year]) {
+          grouped[year] = { year, posts: [] };
+        }
+        grouped[year].posts.push(post);
+      });
+      return Object.values(grouped).sort((a, b) => b.year - a.year);
+    },
+    
+    get sortedTags() {
+      return Object.entries(this.$store.posts.allTags)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
+    },
+    
+    get filteredByTag() {
+      if (!this.selectedTag) return [];
+      return this.$store.posts.items.filter(post => 
+        post.tags.includes(this.selectedTag)
+      );
+    },
+    
     get similarBooks() {
-      if (!this.currentBook) return [];
-      return this.books.filter(book => 
-        book.id !== this.currentBook.id &&
-        book.genre === this.currentBook.genre
+      const current = this.$store.navigation.currentBook;
+      if (!current) return [];
+      return this.$store.books.items.filter(book => 
+        book.id !== current.id && book.genre === current.genre
       ).slice(0, 10);
     },
     
+    get gridLayoutOptions() {
+      return [
+        { value: 'list', label: 'List View', icon: '≡' },
+        { value: 'large', label: 'Large Grid', icon: '⬛' },
+        { value: 'medium', label: 'Medium Grid', icon: '⬜' },
+        { value: 'compact', label: 'Compact Grid', icon: '▫' },
+        { value: 'cover', label: 'Cover Focus', icon: '🖼' }
+      ];
+    },
+    
     // Methods
-    updateTime() {
-      const now = new Date();
-      this.currentTime = now.toLocaleTimeString('en-US', { 
-        hour12: false, 
-        hour: '2-digit', 
-        minute: '2-digit',
-        second: '2-digit'
-      });
-    },
-    
-    toggleTheme() {
-      this.theme = this.theme === 'dark' ? 'light' : 'dark';
-    },
-    
-    toggleFocus() {
-      this.focusMode = !this.focusMode;
-    },
-    
-    navigate(view) {
-      this.currentView = view;
-      this.currentPath = view;
-      if (view !== 'post') {
-        this.currentPost = null;
-      }
-      if (view !== 'book-detail') {
-        this.currentBook = null;
-      }
-    },
-    
-    openPost(post) {
-      this.currentPost = post;
-      this.currentView = 'post';
-      this.currentPath = `posts/${post.slug}`;
-    },
-    
-    openBook(book) {
-      this.currentBook = book;
-      this.currentView = 'book-detail';
-      this.currentPath = `books/${book.id}`;
-      window.scrollTo(0, 0);
-    },
-    
-    isActiveRoute(view) {
-      if (view === 'books') {
-        return ['books', 'book-detail'].includes(this.currentView);
-      }
-      return this.currentView === view;
-    },
-    
-    navigateToTag(tag) {
-      this.selectedTag = tag;
-      this.navigate('tags');
-    },
-    
-    filterByTag(tag) {
-      this.selectedTag = this.selectedTag === tag ? null : tag;
-    },
-    
-    filterBooks() {
-      this.currentBookPage = 1;
-    },
-    
     clearFilters() {
       this.bookSearch = '';
       this.filters = {
@@ -497,10 +466,27 @@ document.addEventListener('alpine:init', () => {
     },
     
     downloadBook(bookId, format) {
-      const book = this.books.find(b => b.id === bookId);
+      const book = this.$store.books.items.find(b => b.id === bookId);
       if (book) {
         alert(`Downloading "${book.title}" in ${format.toUpperCase()} format...`);
       }
+    },
+    
+    navigateToTag(tag) {
+      this.selectedTag = tag;
+      this.$store.navigation.navigate('tags');
+    },
+    
+    filterByTag(tag) {
+      this.selectedTag = this.selectedTag === tag ? null : tag;
+    },
+    
+    toggleYearExpanded(year) {
+      this.archiveExpanded[year] = !this.archiveExpanded[year];
+    },
+    
+    isYearExpanded(year) {
+      return this.archiveExpanded[year] !== false;
     }
   }));
 });

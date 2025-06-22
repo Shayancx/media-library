@@ -1,72 +1,81 @@
 <!DOCTYPE html>
-<html lang="en" x-data="app" :class="theme">
+<html lang="en" x-data="app" :data-theme="$store.theme.current" :data-focus="$store.navigation.focusMode">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title x-text="pageTitle">Media Library</title>
   <link rel="stylesheet" href="assets/css/style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="assets/js/app.js"></script>
 </head>
 <body x-cloak>
   
-  <!-- Header Component -->
-  <header class="header" x-show="!focusMode">
+  <!-- Unified Header -->
+  <header class="header" x-show="!$store.navigation.focusMode" x-transition.opacity.duration.200ms>
     <div class="header-container">
       <div class="header-left">
-        <div class="site-title" @click="navigate('home')">
+        <div class="site-title" @click="$store.navigation.navigate('home')">
           <span class="brand-text">media-library</span>
           <span class="cursor">_</span>
         </div>
-      </div>
-      
-      <div class="header-center">
-        <span class="current-path" x-text="currentPath"></span>
+        
+        <!-- Navigation Links -->
+        <nav class="nav-links">
+          <template x-for="link in $store.navigation.routes" :key="link.id">
+            <a @click.prevent="$store.navigation.navigate(link.view)" 
+               :class="{'active': $store.navigation.current === link.view || 
+                       (link.view === 'books' && $store.navigation.current === 'book-detail')}" 
+               class="nav-link"
+               x-text="link.label">
+            </a>
+          </template>
+        </nav>
       </div>
       
       <div class="header-right">
-        <button @click="toggleTheme" class="theme-toggle" 
-                :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
-          <span x-show="theme === 'dark'">☀️</span>
-          <span x-show="theme === 'light'">🌙</span>
+        <!-- Focus Mode Button (only show on post view) -->
+        <button @click="$store.navigation.focusMode = !$store.navigation.focusMode" 
+                class="action-btn" 
+                x-show="$store.navigation.current === 'post'"
+                x-transition>
+          <span x-text="$store.navigation.focusMode ? 'exit focus' : 'focus mode'"></span>
         </button>
-        <span class="header-time" x-text="currentTime"></span>
+        
+        <!-- Theme Toggle with SVG -->
+        <button @click="$store.theme.toggle()" class="theme-toggle" 
+                :aria-label="$store.theme.current === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
+          <svg x-show="$store.theme.current === 'dark'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg x-show="$store.theme.current === 'light'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
       </div>
     </div>
   </header>
-
-  <!-- Navigation Component -->
-  <nav class="main-nav" x-show="!focusMode">
-    <div class="nav-container">
-      <div class="nav-links">
-        <template x-for="link in navigation" :key="link.id">
-          <a @click.prevent="navigate(link.view)" 
-             :class="{'active': isActiveRoute(link.view)}" 
-             class="nav-link"
-             x-text="link.label">
-          </a>
-        </template>
-      </div>
-      
-      <div class="nav-actions">
-        <button @click="toggleFocus" class="action-btn" x-show="currentView === 'post'">
-          <span x-text="focusMode ? 'exit focus' : 'focus mode'"></span>
-        </button>
-      </div>
-    </div>
-  </nav>
 
   <!-- Main Content -->
   <main class="main-content">
     
     <!-- Home View (Blog Posts) -->
-    <section x-show="currentView === 'home'" x-transition:enter.opacity.duration.200ms>
+    <section x-show="$store.navigation.current === 'home'" x-transition:enter.opacity.duration.200ms>
       <div class="page-header">
         <h1 class="page-title">Recent Posts</h1>
         <p class="page-subtitle">Latest articles and updates</p>
       </div>
       
       <div class="posts-grid">
-        <template x-for="post in posts" :key="post.id">
-          <article class="post-card" @click="openPost(post)">
+        <template x-for="post in $store.posts.items" :key="post.id">
+          <article class="post-card" @click="$store.navigation.openPost(post)">
             <div class="post-header">
               <span class="post-date" x-text="formatDate(post.date)"></span>
               <span class="post-read-time" x-text="post.readTime + ' min'"></span>
@@ -84,7 +93,7 @@
     </section>
 
     <!-- Books Library View -->
-    <section x-show="currentView === 'books'" x-transition:enter.opacity.duration.200ms>
+    <section x-show="$store.navigation.current === 'books'" x-transition:enter.opacity.duration.200ms>
       <div class="page-header">
         <h1 class="page-title">Digital Library</h1>
         <p class="page-subtitle">Browse and download books</p>
@@ -97,15 +106,15 @@
                  x-model="bookSearch" 
                  placeholder="Search books by title, author, ISBN..."
                  class="search-input"
-                 @input="filterBooks">
+                 @input="currentBookPage = 1">
         </div>
         
         <div class="filter-section">
           <div class="filter-group">
             <label class="filter-label">Genre:</label>
-            <select x-model="filters.genre" @change="filterBooks" class="filter-select">
+            <select x-model="filters.genre" @change="currentBookPage = 1" class="filter-select">
               <option value="">All Genres</option>
-              <template x-for="genre in availableGenres" :key="genre">
+              <template x-for="genre in $store.books.genres" :key="genre">
                 <option :value="genre" x-text="genre"></option>
               </template>
             </select>
@@ -113,7 +122,7 @@
           
           <div class="filter-group">
             <label class="filter-label">Format:</label>
-            <select x-model="filters.format" @change="filterBooks" class="filter-select">
+            <select x-model="filters.format" @change="currentBookPage = 1" class="filter-select">
               <option value="">All Formats</option>
               <option value="epub">EPUB</option>
               <option value="pdf">PDF</option>
@@ -122,7 +131,7 @@
           
           <div class="filter-group">
             <label class="filter-label">Language:</label>
-            <select x-model="filters.language" @change="filterBooks" class="filter-select">
+            <select x-model="filters.language" @change="currentBookPage = 1" class="filter-select">
               <option value="">All Languages</option>
               <option value="en">English</option>
               <option value="es">Spanish</option>
@@ -136,9 +145,7 @@
             <label class="filter-label">View:</label>
             <select x-model="gridLayout" class="filter-select grid-select">
               <template x-for="option in gridLayoutOptions" :key="option.value">
-                <option :value="option.value">
-                  <span x-text="option.icon + ' ' + option.label"></span>
-                </option>
+                <option :value="option.value" x-text="option.icon + ' ' + option.label"></option>
               </template>
             </select>
           </div>
@@ -153,16 +160,18 @@
       <div class="results-summary">
         <span>Found <strong x-text="filteredBooks.length"></strong> books</span>
         <span x-show="hasActiveFilters" class="filter-status">
-          (filtered from <span x-text="books.length"></span> total)
+          (filtered from <span x-text="$store.books.items.length"></span> total)
         </span>
       </div>
       
       <!-- Books Grid with Dynamic Layout -->
       <div class="books-grid" :class="'grid-' + gridLayout">
         <template x-for="book in paginatedBooks" :key="book.id">
-          <article class="book-card" @click="openBook(book)">
+          <article class="book-card" @click="$store.navigation.openBook(book)">
             <div class="book-cover">
-              <img :src="book.cover || 'assets/covers/default.jpg'" :alt="book.title + ' cover'">
+              <img :src="book.cover || 'assets/covers/default.jpg'" 
+                   :alt="book.title + ' cover'"
+                   loading="lazy">
               <div class="book-formats">
                 <template x-for="format in book.formats" :key="format">
                   <span class="format-badge" x-text="format.toUpperCase()"></span>
@@ -204,48 +213,49 @@
     </section>
 
     <!-- Book Detail View -->
-    <section x-show="currentView === 'book-detail'" x-transition:enter.opacity.duration.200ms>
-      <div class="book-detail" x-show="currentBook">
+    <section x-show="$store.navigation.current === 'book-detail'" x-transition:enter.opacity.duration.200ms>
+      <div class="book-detail" x-show="$store.navigation.currentBook">
         <div class="book-actions">
-          <button @click="navigate('books')" class="action-btn">
+          <button @click="$store.navigation.navigate('books')" class="action-btn">
             ← back to library
           </button>
         </div>
 
-        <div class="book-detail-content">
+        <div class="book-detail-content" x-data="{book: $store.navigation.currentBook}">
           <div class="book-detail-main">
             <div class="book-detail-cover">
-              <img :src="currentBook?.cover || 'assets/covers/default.jpg'" :alt="currentBook?.title + ' cover'">
+              <img :src="book?.cover || 'assets/covers/default.jpg'" 
+                   :alt="book?.title + ' cover'">
             </div>
             
             <div class="book-detail-info">
-              <h1 class="book-detail-title" x-text="currentBook?.title"></h1>
-              <p class="book-detail-author">by <span x-text="currentBook?.author"></span></p>
+              <h1 class="book-detail-title" x-text="book?.title"></h1>
+              <p class="book-detail-author">by <span x-text="book?.author"></span></p>
               
               <div class="book-info-table">
                 <div class="info-row">
                   <span class="info-label">ISBN:</span>
-                  <span class="info-value" x-text="currentBook?.isbn || 'N/A'"></span>
+                  <span class="info-value" x-text="book?.isbn || 'N/A'"></span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Publisher:</span>
-                  <span class="info-value" x-text="currentBook?.publisher || 'Unknown'"></span>
+                  <span class="info-value" x-text="book?.publisher || 'Unknown'"></span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Year:</span>
-                  <span class="info-value" x-text="currentBook?.year"></span>
+                  <span class="info-value" x-text="book?.year"></span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Pages:</span>
-                  <span class="info-value" x-text="currentBook?.pages || 'N/A'"></span>
+                  <span class="info-value" x-text="book?.pages || 'N/A'"></span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Language:</span>
-                  <span class="info-value" x-text="getLanguageName(currentBook?.language)"></span>
+                  <span class="info-value" x-text="getLanguageName(book?.language)"></span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">Genre:</span>
-                  <span class="info-value" x-text="currentBook?.genre"></span>
+                  <span class="info-value" x-text="book?.genre"></span>
                 </div>
               </div>
               
@@ -253,13 +263,13 @@
               <div class="download-section">
                 <h3 class="download-title">Download Options</h3>
                 <div class="download-buttons">
-                  <template x-for="format in currentBook?.formats || []" :key="format">
-                    <button @click="downloadBook(currentBook.id, format)" 
+                  <template x-for="format in book?.formats || []" :key="format">
+                    <button @click="downloadBook(book.id, format)" 
                             class="download-btn"
                             :class="'format-' + format">
                       <span class="format-icon" x-text="format === 'epub' ? '📖' : '📄'"></span>
                       <span x-text="format.toUpperCase()"></span>
-                      <span class="file-size" x-text="'(' + formatFileSize(currentBook.size) + ')'"></span>
+                      <span class="file-size" x-text="'(' + formatFileSize(book.size) + ')'"></span>
                     </button>
                   </template>
                 </div>
@@ -267,9 +277,9 @@
             </div>
           </div>
           
-          <div class="book-description" x-show="currentBook?.description">
+          <div class="book-description" x-show="book?.description">
             <h3>Description</h3>
-            <p x-text="currentBook?.description"></p>
+            <p x-text="book?.description"></p>
           </div>
           
           <!-- Similar Books -->
@@ -277,8 +287,10 @@
             <h3 class="similar-title">Similar Books</h3>
             <div class="books-carousel">
               <template x-for="similarBook in similarBooks" :key="similarBook.id">
-                <div class="carousel-book" @click="openBook(similarBook)">
-                  <img :src="similarBook.cover || 'assets/covers/default.jpg'" :alt="similarBook.title">
+                <div class="carousel-book" @click="$store.navigation.openBook(similarBook)">
+                  <img :src="similarBook.cover || 'assets/covers/default.jpg'" 
+                       :alt="similarBook.title"
+                       loading="lazy">
                   <p class="carousel-book-title" x-text="similarBook.title"></p>
                   <p class="carousel-book-author" x-text="similarBook.author"></p>
                 </div>
@@ -290,41 +302,38 @@
     </section>
 
     <!-- Post View -->
-    <section x-show="currentView === 'post'" x-transition:enter.opacity.duration.200ms>
-      <article class="post-content" x-show="currentPost">
+    <section x-show="$store.navigation.current === 'post'" x-transition:enter.opacity.duration.200ms>
+      <article class="post-content" x-show="$store.navigation.currentPost" x-data="{post: $store.navigation.currentPost}">
         <div class="post-actions">
-          <button @click="navigate('home')" class="action-btn">
+          <button @click="$store.navigation.navigate('home')" class="action-btn">
             ← back
-          </button>
-          <button @click="toggleFocus()" class="action-btn">
-            <span x-text="focusMode ? 'exit focus' : 'focus mode'"></span>
           </button>
         </div>
 
         <header class="post-header-detail">
-          <h1 class="post-title-detail" x-text="currentPost?.title"></h1>
+          <h1 class="post-title-detail" x-text="post?.title"></h1>
           <div class="post-meta-detail">
             <span class="meta-item">
-              <span x-text="formatDate(currentPost?.date)"></span>
+              <span x-text="formatDate(post?.date)"></span>
             </span>
             <span class="meta-separator">·</span>
             <span class="meta-item">
-              <span x-text="currentPost?.readTime + ' min read'"></span>
+              <span x-text="post?.readTime + ' min read'"></span>
             </span>
           </div>
           <div class="post-tags-detail">
-            <template x-for="tag in currentPost?.tags || []" :key="tag">
+            <template x-for="tag in post?.tags || []" :key="tag">
               <span class="tag" @click="navigateToTag(tag)" x-text="tag"></span>
             </template>
           </div>
         </header>
 
-        <div class="post-body" x-html="currentPost?.content"></div>
+        <div class="post-body" x-html="post?.content"></div>
       </article>
     </section>
 
     <!-- Archive View -->
-    <section x-show="currentView === 'archive'" x-transition:enter.opacity.duration.200ms>
+    <section x-show="$store.navigation.current === 'archive'" x-transition:enter.opacity.duration.200ms>
       <div class="page-header">
         <h1 class="page-title">Archive</h1>
         <p class="page-subtitle">Browse posts by year</p>
@@ -333,14 +342,14 @@
       <div class="archive-tree">
         <template x-for="year in archiveByYear" :key="year.year">
           <div class="year-group">
-            <h3 class="year-title" @click="year.expanded = !year.expanded">
-              <span class="year-toggle" x-text="year.expanded ? '−' : '+'"></span>
+            <h3 class="year-title" @click="toggleYearExpanded(year.year)">
+              <span class="year-toggle" x-text="isYearExpanded(year.year) ? '−' : '+'"></span>
               <span x-text="year.year"></span>
               <span class="year-count">(<span x-text="year.posts.length"></span>)</span>
             </h3>
-            <div class="year-posts" x-show="year.expanded" x-transition>
+            <div class="year-posts" x-show="isYearExpanded(year.year)" x-transition>
               <template x-for="post in year.posts" :key="post.id">
-                <div class="archive-post" @click="openPost(post)">
+                <div class="archive-post" @click="$store.navigation.openPost(post)">
                   <span class="archive-date" x-text="formatDate(post.date, 'short')"></span>
                   <span class="archive-title" x-text="post.title"></span>
                 </div>
@@ -352,7 +361,7 @@
     </section>
 
     <!-- Tags View -->
-    <section x-show="currentView === 'tags'" x-transition:enter.opacity.duration.200ms>
+    <section x-show="$store.navigation.current === 'tags'" x-transition:enter.opacity.duration.200ms>
       <div class="page-header">
         <h1 class="page-title">Tags</h1>
         <p class="page-subtitle">Browse posts by topic</p>
@@ -376,7 +385,7 @@
         </div>
         <div class="posts-list">
           <template x-for="post in filteredByTag" :key="post.id">
-            <div class="filtered-post" @click="openPost(post)">
+            <div class="filtered-post" @click="$store.navigation.openPost(post)">
               <span x-text="post.title"></span>
               <span class="post-date-small" x-text="formatDate(post.date, 'short')"></span>
             </div>
@@ -386,7 +395,7 @@
     </section>
 
     <!-- About View -->
-    <section x-show="currentView === 'about'" x-transition:enter.opacity.duration.200ms>
+    <section x-show="$store.navigation.current === 'about'" x-transition:enter.opacity.duration.200ms>
       <div class="about-content">
         <div class="page-header">
           <h1 class="page-title">About</h1>
@@ -410,19 +419,19 @@
           <h3>Statistics</h3>
           <div class="stats-grid">
             <div class="stat-item">
-              <span class="stat-value" x-text="posts.length"></span>
+              <span class="stat-value" x-text="$store.posts.items.length"></span>
               <span class="stat-label">Posts</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value" x-text="books.length"></span>
+              <span class="stat-value" x-text="$store.books.items.length"></span>
               <span class="stat-label">Books</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value" x-text="Object.keys(tagCounts).length"></span>
+              <span class="stat-value" x-text="Object.keys($store.posts.allTags).length"></span>
               <span class="stat-label">Tags</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value" x-text="availableGenres.length"></span>
+              <span class="stat-value" x-text="$store.books.genres.length"></span>
               <span class="stat-label">Genres</span>
             </div>
           </div>
@@ -433,24 +442,21 @@
   </main>
 
   <!-- Footer Component -->
-  <footer class="footer" x-show="!focusMode">
+  <footer class="footer" x-show="!$store.navigation.focusMode" x-transition.opacity.duration.200ms>
     <div class="footer-content">
       <span class="footer-item">
-        <span x-text="posts.length"></span> posts
+        <span x-text="$store.posts.items.length"></span> posts
       </span>
       <span class="footer-separator">·</span>
       <span class="footer-item">
-        <span x-text="books.length"></span> books
+        <span x-text="$store.books.items.length"></span> books
       </span>
       <span class="footer-separator">·</span>
       <span class="footer-item">
-        <span x-text="theme"></span> theme
+        <span x-text="$store.theme.current"></span> theme
       </span>
     </div>
   </footer>
 
-  <!-- Alpine.js -->
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script src="assets/js/app.js"></script>
 </body>
 </html>
